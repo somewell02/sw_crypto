@@ -68,7 +68,7 @@
                                 {{ t.name }} - USD
                             </dt>
                             <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                                {{ t.price }}
+                                {{ formatPrice(t.price) }}
                             </dd>
                         </div>
                         <div class="w-full border-t border-gray-200"></div>
@@ -117,6 +117,8 @@ import LoaderScreen from "@/components/LoaderScreen";
 import BorderedInput from "@/components/BorderedInput";
 import FilledButton from "@/components/FilledButton";
 
+import {loadAllTickers, subscribeToTicker, unsubscribeFromTicker} from "@/data/api";
+
 export default {
     name: 'App',
     components: {FilledButton, BorderedInput, LoaderScreen, AddIcon, DeleteIcon, CloseIcon},
@@ -135,19 +137,12 @@ export default {
     },
 
     async mounted() {
-        const allTickers = await fetch(
-            `https://min-api.cryptocompare.com/data/all/coinlist?summary=true&api_key=2bb59c3cba8de19675c26a6a65a1c298b555117ead02f242a572e2b7b0ae2516`
-        );
-        const data = await allTickers.json();
-        this.allTickers = Object.values(data.Data);
+        const allTickersData = await loadAllTickers();
+        this.allTickers = Object.values(allTickersData.Data);
         this.loading = false;
     },
 
     created() {
-        const tickersData = localStorage.getItem("crypto-list");
-        this.tickers = tickersData ? JSON.parse(tickersData) : [];
-        this.tickers.forEach((t) => this.subscribeToUpdates(t.name));
-
         const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
         const VALID_KEYS = ["search", "page"];
         VALID_KEYS.forEach((key) => {
@@ -155,6 +150,15 @@ export default {
                 this[key] = windowData[key];
             }
         });
+
+
+        const tickersData = localStorage.getItem("crypto-list");
+        if (tickersData) {
+            this.tickers = JSON.parse(tickersData);
+            this.tickers.forEach(t => {
+                subscribeToTicker(t.name, (newPrice) => this.updateTicker(t.name, newPrice));
+            })
+        }
     },
 
     computed: {
@@ -196,31 +200,31 @@ export default {
     },
 
     methods: {
-        isTickerExist(symbol) {
-            return this.allTickers.find((t) => t.Symbol === symbol.toUpperCase());
+        isTickerExist(currency) {
+            return this.allTickers.find((t) => t.Symbol === currency.toUpperCase());
         },
-        subscribeToUpdates(tickerName) {
-            setInterval(async () => {
-                const f = await fetch(
-                    `https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=2bb59c3cba8de19675c26a6a65a1c298b555117ead02f242a572e2b7b0ae2516`
-                );
-                const data = await f.json();
-                this.tickers.find(t => t.name === tickerName).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+        formatPrice(price) {
+            if (typeof price !== "number") return price;
+            else return price > 1 ? price.toFixed(2) : price.toPrecision(2);
+        },
+        updateTicker(tickerName, price) {
+            this.tickers
+                .filter(t => t.name === tickerName)
+                .forEach(t => t.price = price);
 
-                if (this.selectedTicker?.name === tickerName) {
-                    this.graph.push(data.USD);
-                }
-            }, 3000);
+            // if (this.selectedTicker?.name === tickerName) {
+            //     this.graph.push(exchangeData.USD);
+            // }
         },
-        addTicker(symbol) {
-            if (!this.isTickerExist(symbol)) {
+        addTicker(currency) {
+            if (!this.isTickerExist(currency)) {
                 this.isExistError = "Такого тикера не существует";
-            } else if (this.tickers.find((t) => t.name === symbol.toUpperCase())) {
+            } else if (this.tickers.find((t) => t.name === currency.toUpperCase())) {
                 this.isExistError = "Такой тикер уже добавлен";
             } else {
-                const currentTicker = {name: symbol.toUpperCase(), price: "-"};
+                const currentTicker = {name: currency.toUpperCase(), price: "-"};
                 this.tickers = [...this.tickers, currentTicker];
-                this.subscribeToUpdates(currentTicker.name);
+                subscribeToTicker(currentTicker.name, (newPrice) => this.updateTicker(currentTicker.name, newPrice));
 
                 this.ticker = "";
                 this.isExistError = null;
@@ -230,6 +234,7 @@ export default {
         },
         deleteTicker(tickerToRemove) {
             this.tickers = this.tickers.filter(t => t !== tickerToRemove);
+            unsubscribeFromTicker(tickerToRemove.name)
 
             if (this.selectedTicker === tickerToRemove) {
                 this.selectedTicker = null;
