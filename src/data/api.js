@@ -1,14 +1,19 @@
 const API_KEY = "2bb59c3cba8de19675c26a6a65a1c298b555117ead02f242a572e2b7b0ae2516";
-
-const tickersHandlers = new Map();
-
-const socket = new WebSocket(`wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`);
 const AGGREGATE_INDEX = "5";
 const ERROR_INDEX = "500";
 const INVALID_SUB_MESSAGE = "INVALID_SUB";
 
-let btcToUsdPrice = 0;
+const tickersHandlers = new Map();
+const socket = new WebSocket(`wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`);
 
+// const worker = new SharedWorker("shared-worker.js");
+// console.log(worker);
+// worker.port.onmessage = (e) => {
+//     console.log(e.data);
+// }
+// worker.port.postMessage("testing");
+
+let btcToUsdPrice = 0;
 
 socket.addEventListener("message", (e) => {
     const {
@@ -21,6 +26,9 @@ socket.addEventListener("message", (e) => {
     } = JSON.parse(e.data);
 
     if (type === ERROR_INDEX && message === INVALID_SUB_MESSAGE && parameter.split("~")[3] === "USD") {
+        if (!tickersHandlers.get("BTC")) {
+            subscribeToTickerOnWs("BTC", "USD");
+        }
         subscribeToTickerOnWs(parameter.split("~")[2], "BTC");
         return;
     } else if (type !== AGGREGATE_INDEX || !newPrice) {
@@ -68,23 +76,41 @@ const unsubscribeFromTickerOnWs = (tickerName, tsym) => {
 export const subscribeToTicker = (ticker, cb) => {
     const subscribers = tickersHandlers.get(ticker) || [];
     tickersHandlers.set(ticker, [...subscribers, cb]);
+}
+
+export const unsubscribeFromTicker = (ticker, cb) => {
+    if (tickersHandlers.has(ticker)) {
+        const subscribers = tickersHandlers.get(ticker) || [];
+        tickersHandlers.set(ticker, subscribers.filter(fn => fn !== cb));
+    }
+}
+
+export const addTicker = (ticker, cb) => {
+    subscribeToTicker(ticker, cb);
     subscribeToTickerOnWs(ticker, "USD");
 }
 
-export const unsubscribeFromTicker = (ticker) => {
+export const deleteTicker = (ticker) => {
     tickersHandlers.delete(ticker);
     unsubscribeFromTickerOnWs(ticker, "USD");
 }
 
-
 export const loadAllTickers = () => {
-    return fetch(
-        `https://min-api.cryptocompare.com/data/all/coinlist?summary=true&api_key=${API_KEY}`
-    ).then(data => data.json());
+    const url = new URL("https://min-api.cryptocompare.com/data/all/coinlist");
+    url.searchParams.set("summary", "true");
+    url.searchParams.set("api_key", API_KEY);
+
+    return fetch(url.toString())
+        .then(data => data.json());
 }
 
 export const loadTickerHistory = (tickerName, limit) => {
-    return fetch(
-        `https://min-api.cryptocompare.com/data/v2/histominute?fsym=${tickerName}&tsym=USD&limit=${limit}&api_key=${API_KEY}`
-    ).then(data => data.json());
+    const url = new URL("https://min-api.cryptocompare.com/data/v2/histominute");
+    url.searchParams.set("fsym", tickerName);
+    url.searchParams.set("tsym", "USD");
+    url.searchParams.set("limit", limit);
+    url.searchParams.set("api_key", API_KEY);
+
+    return fetch(url.toString())
+        .then(data => data.json());
 }

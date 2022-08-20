@@ -106,7 +106,7 @@
                     <button
                         type="button"
                         class="absolute top-0 right-0"
-                        @click="clearSel"
+                        @click="clearSelectedTicker"
                     >
                         <close-icon/>
                     </button>
@@ -124,29 +124,37 @@ import LoaderScreen from "@/components/LoaderScreen";
 import BorderedInput from "@/components/BorderedInput";
 import FilledButton from "@/components/FilledButton";
 
-import {loadAllTickers, loadTickerHistory, subscribeToTicker, unsubscribeFromTicker} from "@/data/api";
+import {
+    loadAllTickers,
+    loadTickerHistory,
+    subscribeToTicker,
+    unsubscribeFromTicker,
+    addTicker,
+    deleteTicker,
+} from "@/data/api";
 
 export default {
-    name: 'App',
-
     GRAPH_ELEMENT_WIDTH: 38,
     COUNT_ON_PAGE: 6,
     TICKERS_LS_KEY: "crypto-list",
 
+    name: 'App',
     components: {FilledButton, BorderedInput, LoaderScreen, AddIcon, DeleteIcon, CloseIcon},
 
     data() {
         return {
             ticker: "",
             tickers: [],
+            graph: [],
             allTickers: null,
             selectedTicker: null,
-            graph: [],
-            maxGraphElements: 1,
+
             isExistError: null,
             loading: true,
+
             search: "",
             page: 1,
+            maxGraphElements: 1,
         }
     },
 
@@ -177,7 +185,7 @@ export default {
         if (tickersData) {
             this.tickers = JSON.parse(tickersData);
             this.tickers.forEach(t => {
-                subscribeToTicker(t.name, (newPrice) => this.updateTicker(t.name, newPrice));
+                addTicker(t.name, (newPrice) => this.updateTickerPrice(t.name, newPrice));
             })
         }
     },
@@ -225,16 +233,16 @@ export default {
             if (typeof price !== "number") return "-";
             else return price > 1 ? price.toFixed(2) : price.toPrecision(2);
         },
-        updateTicker(tickerName, price) {
+        updateTickerPrice(tickerName, price) {
             this.tickers
                 .filter(t => t.name === tickerName)
                 .forEach(t =>  {
-                    if (this.selectedTicker?.name === t.name) {
-                        this.graph.push(price);
-                        this.fixGraphLength();
-                    }
                     t.price = price
                 });
+        },
+        pushToGraph(price) {
+            this.graph.push(price);
+            this.fixGraphLength();
         },
         addTicker(currency) {
             if (this.tickers.find((t) => t.name === currency.toUpperCase())) {
@@ -242,7 +250,7 @@ export default {
             } else {
                 const currentTicker = {name: currency.toUpperCase(), price: "-"};
                 this.tickers = [...this.tickers, currentTicker];
-                subscribeToTicker(currentTicker.name, (newPrice) => this.updateTicker(currentTicker.name, newPrice));
+                addTicker(currentTicker.name, (newPrice) => this.updateTickerPrice(currentTicker.name, newPrice));
 
                 this.ticker = "";
                 this.isExistError = null;
@@ -251,7 +259,7 @@ export default {
         },
         deleteTicker(tickerToRemove) {
             this.tickers = this.tickers.filter(t => t !== tickerToRemove);
-            unsubscribeFromTicker(tickerToRemove.name)
+            deleteTicker(tickerToRemove.name);
 
             if (this.selectedTicker === tickerToRemove) {
                 this.selectedTicker = null;
@@ -260,7 +268,7 @@ export default {
         selectTicker(tickerToSelect) {
             this.selectedTicker = tickerToSelect;
         },
-        clearSel() {
+        clearSelectedTicker() {
             this.selectedTicker = null
         },
         calculateMaxGraphElements() {
@@ -290,21 +298,31 @@ export default {
                 this.page -= 1;
             }
         },
-        selectedTicker() {
+        selectedTicker(newValue, oldValue) {
             this.graph = [];
+
+            if (oldValue) unsubscribeFromTicker(oldValue.name, this.pushToGraph);
+            if (newValue) subscribeToTicker(newValue.name, this.pushToGraph);
+
             this.$nextTick().then(() => {
                 this.calculateMaxGraphElements();
-                this.pushTickerHistoryToGraph(this.selectedTicker.name);
+                if (newValue) {
+                    this.pushTickerHistoryToGraph(newValue.name);
+                }
             });
         },
         search() {
             this.page = 1;
         },
         pageStateOptions(v) {
+            let urlParams = new URLSearchParams();
+            urlParams.set("search", v.search);
+            urlParams.set("page", v.page);
+
             window.history.pushState(
                 null,
                 document.title,
-                `${window.location.pathname}?search=${v.search}&page=${v.page}`
+                `${window.location.pathname}?${urlParams.toString()}`
             );
         }
     }
