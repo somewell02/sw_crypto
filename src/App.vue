@@ -2,10 +2,15 @@
     <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
         <loader-screen v-if="loading"/>
         <div class="container">
-            <add-ticker-section :tickers="tickers.map(t => t.name)" @add-ticker="addTicker" @data-received="loading = false"/>
+            <modal-wrap ref="addTickerModal">
+                <add-ticker-section
+                    :tickers="tickers.map(t => t.name)"
+                    :allTickers="allTickers"
+                    @add-ticker="addTicker"
+                />
+            </modal-wrap>
 
             <template v-if="tickers.length">
-                <hr class="w-full border-t border-gray-600 my-4"/>
                 <div class="flex justify-between items-center">
                     <div class="flex items-center">
                         <bordered-input
@@ -18,18 +23,9 @@
                     </div>
                     <div>
                         <filled-button
-                            :class="{ 'opacity-50': page <= 1}"
-                            :disabled="page <= 1"
-                            @click="page--"
+                            @click="$refs.addTickerModal.open()"
                         >
-                            Назад
-                        </filled-button>
-                        <filled-button
-                            :class="{ 'opacity-50': !hasNextPage}"
-                            :disabled="!hasNextPage"
-                            @click="page++" class="ml-4"
-                        >
-                            Вперед
+                            Добавить тикер
                         </filled-button>
                     </div>
                 </div>
@@ -38,9 +34,9 @@
                         v-for="(t, i) in paginatedTickers"
                         :key="i"
                         @click="selectTicker(t)"
-                        class="overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
+                        class="overflow-hidden shadow rounded-lg outline-purple-800 cursor-pointer"
                         :class="{
-                            'border-4': selectedTicker === t,
+                            'outline': selectedTicker === t,
                             'bg-white': t.price !== '-',
                             'bg-red-100': t.price === '-',
                         }"
@@ -62,11 +58,34 @@
                             Удалить
                         </button>
                     </div>
+                    <confirm-popup ref="confirmPopup" />
                 </dl>
+                <div class="flex mt-5 justify-between items-center">
+                    <div class="text-gray-500">
+                        {{ startIndex + 1 }} - {{ endIndex > filteredTickers.length ? filteredTickers.length : endIndex }} из {{ filteredTickers.length }}
+                    </div>
+                    <div>
+                        <filled-button
+                            :class="{ 'opacity-50': page <= 1}"
+                            :disabled="page <= 1"
+                            @click="page--"
+                        >
+                            Назад
+                        </filled-button>
+                        <filled-button
+                            :class="{ 'opacity-50': !hasNextPage}"
+                            :disabled="!hasNextPage"
+                            @click="page++"
+                            class="ml-4"
+                        >
+                            Вперед
+                        </filled-button>
+                    </div>
+                </div>
             </template>
             <template v-if="selectedTicker">
                 <hr class="w-full border-t border-gray-600 my-4"/>
-                <graph-section :ticker="selectedTicker.name" @close="clearSelectedTicker" />
+                <graph-section :ticker="selectedTicker.name" @close="clearSelectedTicker"/>
             </template>
         </div>
     </div>
@@ -80,11 +99,14 @@ import FilledButton from "@/components/FilledButton";
 
 import AddTickerSection from "@/components/AddTickerSection";
 import GraphSection from "@/components/GraphSection";
+import ModalWrap from "@/components/ModalWrap";
 
 import {
     addTicker,
     deleteTicker,
+    loadAllTickers,
 } from "@/data/api";
+import ConfirmPopup from "@/components/ConfirmPopup";
 
 export default {
     COUNT_ON_PAGE: 6,
@@ -92,6 +114,8 @@ export default {
 
     name: 'App',
     components: {
+        ConfirmPopup,
+        ModalWrap,
         GraphSection,
         AddTickerSection,
         FilledButton,
@@ -103,6 +127,7 @@ export default {
     data() {
         return {
             tickers: [],
+            allTickers: null,
             selectedTicker: null,
 
             loading: true,
@@ -110,6 +135,12 @@ export default {
             search: "",
             page: 1,
         }
+    },
+
+    async mounted() {
+        const allTickersData = await loadAllTickers();
+        this.allTickers = Object.values(allTickersData.Data);
+        this.loading = false;
     },
 
     created() {
@@ -171,11 +202,15 @@ export default {
             this.tickers = [...this.tickers, currentTicker];
             addTicker(currentTicker.name, (newPrice) => this.updateTickerPrice(currentTicker.name, newPrice));
 
+            this.$refs.addTickerModal.close()
             this.search = "";
         },
-        deleteTicker(tickerToRemove) {
-            this.tickers = this.tickers.filter(t => t !== tickerToRemove);
-            deleteTicker(tickerToRemove.name);
+        async deleteTicker(tickerToRemove) {
+            const confirmRes = await this.$refs.confirmPopup.open(`Вы уверены, что хотите удалить тикер ${tickerToRemove.name}?`);
+            if (confirmRes) {
+                this.tickers = this.tickers.filter(t => t !== tickerToRemove);
+                deleteTicker(tickerToRemove.name);
+            }
 
             if (this.selectedTicker === tickerToRemove) {
                 this.selectedTicker = null;

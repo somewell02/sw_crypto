@@ -14,18 +14,13 @@
                 class="bg-purple-800 border"
             ></div>
         </div>
-        <button
-            type="button"
-            class="absolute top-0 right-0"
-            @click="$emit('close')"
-        >
-            <close-icon/>
-        </button>
+        <close-button @click="$emit('close')" />
     </section>
 </template>
 
 <script>
-import CloseIcon from "@/assets/img/icons/CloseIcon";
+import CloseButton from "@/components/CloseButton";
+
 import {loadTickerHistory, subscribeToTicker, unsubscribeFromTicker} from "@/data/api";
 
 export default {
@@ -33,7 +28,7 @@ export default {
 
     name: "GraphSection",
     components: {
-        CloseIcon,
+        CloseButton,
     },
 
     data() {
