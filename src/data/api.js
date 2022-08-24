@@ -1,4 +1,5 @@
 const API_KEY = "2bb59c3cba8de19675c26a6a65a1c298b555117ead02f242a572e2b7b0ae2516";
+const MAIN_CURRENCY = "USD";
 const AGGREGATE_INDEX = "5";
 const ERROR_INDEX = "500";
 const INVALID_SUB_MESSAGE = "INVALID_SUB";
@@ -6,16 +7,11 @@ const INVALID_SUB_MESSAGE = "INVALID_SUB";
 const tickersHandlers = new Map();
 const socket = new WebSocket(`wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`);
 
-// const worker = new SharedWorker("shared-worker.js");
-// console.log(worker);
-// worker.port.onmessage = (e) => {
-//     console.log(e.data);
-// }
-// worker.port.postMessage("testing");
+export const channel = new BroadcastChannel('app-data');
 
 let btcToUsdPrice = 0;
 
-socket.addEventListener("message", (e) => {
+const handleTickers = (e) => {
     const {
         TYPE: type,
         MESSAGE: message,
@@ -25,9 +21,9 @@ socket.addEventListener("message", (e) => {
         PRICE: newPrice
     } = JSON.parse(e.data);
 
-    if (type === ERROR_INDEX && message === INVALID_SUB_MESSAGE && parameter.split("~")[3] === "USD") {
+    if (type === ERROR_INDEX && message === INVALID_SUB_MESSAGE && parameter.split("~")[3] === MAIN_CURRENCY) {
         if (!tickersHandlers.get("BTC")) {
-            subscribeToTickerOnWs("BTC", "USD");
+            subscribeToTickerOnWs("BTC", MAIN_CURRENCY);
         }
         subscribeToTickerOnWs(parameter.split("~")[2], "BTC");
         return;
@@ -40,10 +36,44 @@ socket.addEventListener("message", (e) => {
     }
 
     const handlers = tickersHandlers.get(currency) ?? [];
-    if (tsym === "USD") {
+    if (tsym === MAIN_CURRENCY) {
         handlers.forEach(fn => fn(newPrice));
     } else {
         handlers.forEach(fn => fn(newPrice*btcToUsdPrice));
+    }
+};
+
+const sendData = (e) => {
+    const {
+        TYPE: type,
+        PRICE: newPrice
+    } = JSON.parse(e.data);
+
+    if (type === AGGREGATE_INDEX && newPrice) {
+        channel.postMessage({ type: "update-prices", data: e.data });
+    }
+}
+
+socket.addEventListener("message", handleTickers);
+socket.addEventListener("message", sendData);
+
+channel.addEventListener("message", (event) => {
+    const { type, data } = event.data;
+    switch (type) {
+        case "update-prices":
+            handleTickers(event.data);
+            break;
+        case "add-ticker":
+            if (!tickersHandlers.has(data.ticker)) {
+                subscribeToTickerOnWs(data.ticker, MAIN_CURRENCY);
+            }
+            break;
+        case "delete-ticker":
+            if (tickersHandlers.has(data.ticker)) {
+                tickersHandlers.delete(data.ticker);
+                unsubscribeFromTickerOnWs(data.ticker, MAIN_CURRENCY);
+            }
+            break;
     }
 });
 
@@ -87,12 +117,14 @@ export const unsubscribeFromTicker = (ticker, cb) => {
 
 export const addTicker = (ticker, cb) => {
     subscribeToTicker(ticker, cb);
-    subscribeToTickerOnWs(ticker, "USD");
+    subscribeToTickerOnWs(ticker, MAIN_CURRENCY);
+    channel.postMessage({ type: "add-ticker", data: { ticker }});
 }
 
 export const deleteTicker = (ticker) => {
     tickersHandlers.delete(ticker);
-    unsubscribeFromTickerOnWs(ticker, "USD");
+    unsubscribeFromTickerOnWs(ticker, MAIN_CURRENCY);
+    channel.postMessage({ type: "delete-ticker", data: { ticker }});
 }
 
 export const loadAllTickers = () => {
@@ -107,7 +139,7 @@ export const loadAllTickers = () => {
 export const loadTickerHistory = (tickerName, limit) => {
     const url = new URL("https://min-api.cryptocompare.com/data/v2/histominute");
     url.searchParams.set("fsym", tickerName);
-    url.searchParams.set("tsym", "USD");
+    url.searchParams.set("tsym", MAIN_CURRENCY);
     url.searchParams.set("limit", limit);
     url.searchParams.set("api_key", API_KEY);
 

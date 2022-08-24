@@ -10,25 +10,26 @@
                 />
             </modal-wrap>
 
-            <template v-if="tickers.length">
-                <div class="flex justify-between items-center">
-                    <div class="flex items-center">
-                        <bordered-input
-                            v-model="search"
-                            type="text"
-                            name="search"
-                            id="search"
-                            placeholder="Поиск..."
-                        />
-                    </div>
-                    <div>
-                        <filled-button
-                            @click="$refs.addTickerModal.open()"
-                        >
-                            Добавить тикер
-                        </filled-button>
-                    </div>
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <bordered-input
+                        v-model="search"
+                        type="text"
+                        name="search"
+                        id="search"
+                        placeholder="Поиск..."
+                    />
                 </div>
+                <div>
+                    <filled-button
+                        @click="$refs.addTickerModal.open()"
+                    >
+                        Добавить тикер
+                    </filled-button>
+                </div>
+            </div>
+
+            <template v-if="tickers.length">
                 <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
                     <div
                         v-for="(t, i) in paginatedTickers"
@@ -102,9 +103,10 @@ import GraphSection from "@/components/GraphSection";
 import ModalWrap from "@/components/ModalWrap";
 
 import {
+    channel,
     addTicker,
     deleteTicker,
-    loadAllTickers,
+    loadAllTickers, subscribeToTicker,
 } from "@/data/api";
 import ConfirmPopup from "@/components/ConfirmPopup";
 
@@ -159,6 +161,21 @@ export default {
                 addTicker(t.name, (newPrice) => this.updateTickerPrice(t.name, newPrice));
             })
         }
+
+        channel.addEventListener("message", (event) => {
+            const { type, data } = event.data;
+            switch (type) {
+                case "add-ticker":
+                    if (!this.tickers.map(t => t.name).includes(data.ticker)) {
+                        this.tickers = [...this.tickers, {name: data.ticker, price: "-"}];
+                        subscribeToTicker(data.ticker, (newPrice) => this.updateTickerPrice(data.ticker, newPrice));
+                    }
+                    break;
+                case "delete-ticker":
+                    this.tickers = this.tickers.filter(t => t.name !== data.ticker);
+                    break;
+            }
+        });
     },
 
     computed: {
