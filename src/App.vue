@@ -1,6 +1,6 @@
 <template>
     <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
-        <loader-screen v-if="loading"/>
+        <loader-screen ref="loaderScreen"/>
         <div class="container">
             <modal-wrap ref="addTickerModal">
                 <add-ticker-section
@@ -101,14 +101,17 @@ import FilledButton from "@/components/FilledButton";
 import AddTickerSection from "@/components/AddTickerSection";
 import GraphSection from "@/components/GraphSection";
 import ModalWrap from "@/components/ModalWrap";
+import ConfirmPopup from "@/components/ConfirmPopup";
 
 import {
-    channel,
     addTicker,
     deleteTicker,
     loadAllTickers, subscribeToTicker,
 } from "@/data/api";
-import ConfirmPopup from "@/components/ConfirmPopup";
+import { channel } from "@/data/broadcast-channel";
+
+import { getUrlParams, historyPushState } from "@/services/methods/url";
+import {getFromLocalStorage, setToLocalStorage} from "@/services/methods/localstorage";
 
 export default {
     COUNT_ON_PAGE: 6,
@@ -132,21 +135,13 @@ export default {
             allTickers: null,
             selectedTicker: null,
 
-            loading: true,
-
             search: "",
             page: 1,
         }
     },
 
-    async mounted() {
-        const allTickersData = await loadAllTickers();
-        this.allTickers = Object.values(allTickersData.Data);
-        this.loading = false;
-    },
-
     created() {
-        const windowData = Object.fromEntries(new URL(window.location).searchParams.entries());
+        const windowData = getUrlParams();
         const VALID_KEYS = ["search", "page"];
         VALID_KEYS.forEach((key) => {
             if (windowData[key]) {
@@ -154,9 +149,9 @@ export default {
             }
         });
 
-        const tickersData = localStorage.getItem(this.$options.TICKERS_LS_KEY);
+        const tickersData = getFromLocalStorage(this.$options.TICKERS_LS_KEY);
         if (tickersData) {
-            this.tickers = JSON.parse(tickersData);
+            this.tickers = tickersData;
             this.tickers.forEach(t => {
                 addTicker(t.name, (newPrice) => this.updateTickerPrice(t.name, newPrice));
             })
@@ -176,6 +171,12 @@ export default {
                     break;
             }
         });
+    },
+
+    async mounted() {
+        const allTickersData = await loadAllTickers();
+        this.allTickers = Object.values(allTickersData.Data);
+        this.$refs.loaderScreen.close();
     },
 
     computed: {
@@ -243,7 +244,7 @@ export default {
 
     watch: {
         tickers() {
-            localStorage.setItem(this.$options.TICKERS_LS_KEY, JSON.stringify(this.tickers));
+            setToLocalStorage(this.$options.TICKERS_LS_KEY, this.tickers);
         },
         paginatedTickers() {
             if (this.paginatedTickers.length === 0 && this.page > 1) {
@@ -254,15 +255,10 @@ export default {
             this.page = 1;
         },
         pageStateOptions(v) {
-            let urlParams = new URLSearchParams();
-            urlParams.set("search", v.search);
-            urlParams.set("page", v.page);
-
-            window.history.pushState(
-                null,
-                document.title,
-                `${window.location.pathname}?${urlParams.toString()}`
-            );
+            historyPushState({
+                search: v.search,
+                page: v.page
+            });
         }
     }
 }

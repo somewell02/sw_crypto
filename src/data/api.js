@@ -1,17 +1,17 @@
+import { channelPostMessage, sendTickersData } from "@/data/broadcast-channel";
+
 const API_KEY = "2bb59c3cba8de19675c26a6a65a1c298b555117ead02f242a572e2b7b0ae2516";
-const MAIN_CURRENCY = "USD";
-const AGGREGATE_INDEX = "5";
+export const MAIN_CURRENCY = "USD";
+export const AGGREGATE_INDEX = "5";
 const ERROR_INDEX = "500";
 const INVALID_SUB_MESSAGE = "INVALID_SUB";
 
-const tickersHandlers = new Map();
+export const tickersHandlers = new Map();
 const socket = new WebSocket(`wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`);
-
-export const channel = new BroadcastChannel('app-data');
 
 let btcToUsdPrice = 0;
 
-const handleTickers = (e) => {
+export const handleTickers = (e) => {
     const {
         TYPE: type,
         MESSAGE: message,
@@ -43,39 +43,8 @@ const handleTickers = (e) => {
     }
 };
 
-const sendData = (e) => {
-    const {
-        TYPE: type,
-        PRICE: newPrice
-    } = JSON.parse(e.data);
-
-    if (type === AGGREGATE_INDEX && newPrice) {
-        channel.postMessage({ type: "update-prices", data: e.data });
-    }
-}
-
 socket.addEventListener("message", handleTickers);
-socket.addEventListener("message", sendData);
-
-channel.addEventListener("message", (event) => {
-    const { type, data } = event.data;
-    switch (type) {
-        case "update-prices":
-            handleTickers(event.data);
-            break;
-        case "add-ticker":
-            if (!tickersHandlers.has(data.ticker)) {
-                subscribeToTickerOnWs(data.ticker, MAIN_CURRENCY);
-            }
-            break;
-        case "delete-ticker":
-            if (tickersHandlers.has(data.ticker)) {
-                tickersHandlers.delete(data.ticker);
-                unsubscribeFromTickerOnWs(data.ticker, MAIN_CURRENCY);
-            }
-            break;
-    }
-});
+socket.addEventListener("message", sendTickersData);
 
 const sendToWS = (message) => {
     const stringifiedMessage = JSON.stringify(message);
@@ -89,14 +58,14 @@ const sendToWS = (message) => {
     }
 }
 
-const subscribeToTickerOnWs = (tickerName, tsym) => {
+export const subscribeToTickerOnWs = (tickerName, tsym) => {
     sendToWS({
         "action": "SubAdd",
         "subs": [`5~CCCAGG~${tickerName}~${tsym}`],
     });
 }
 
-const unsubscribeFromTickerOnWs = (tickerName, tsym) => {
+export const unsubscribeFromTickerOnWs = (tickerName, tsym) => {
     sendToWS({
         "action": "SubRemove",
         "subs": [`5~CCCAGG~${tickerName}~${tsym}`],
@@ -118,13 +87,13 @@ export const unsubscribeFromTicker = (ticker, cb) => {
 export const addTicker = (ticker, cb) => {
     subscribeToTicker(ticker, cb);
     subscribeToTickerOnWs(ticker, MAIN_CURRENCY);
-    channel.postMessage({ type: "add-ticker", data: { ticker }});
+    channelPostMessage("add-ticker", { ticker })
 }
 
 export const deleteTicker = (ticker) => {
     tickersHandlers.delete(ticker);
     unsubscribeFromTickerOnWs(ticker, MAIN_CURRENCY);
-    channel.postMessage({ type: "delete-ticker", data: { ticker }});
+    channelPostMessage("delete-ticker", { ticker })
 }
 
 export const loadAllTickers = () => {

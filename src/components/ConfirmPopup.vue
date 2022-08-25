@@ -11,7 +11,7 @@
 <script>
 import ModalWrap from "@/components/ModalWrap";
 import FilledButton from "@/components/FilledButton";
-import VFocus from "@/directives/VFocus";
+import VFocus from "@/services/directives/VFocus";
 
 export default {
     popupController: null,

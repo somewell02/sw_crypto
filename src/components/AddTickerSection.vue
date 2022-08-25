@@ -18,13 +18,13 @@
                     v-if="allTickers && hintTickers.length > 0 && ticker"
                     class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
                 >
-                    <span
+                    <button
                         v-for="t in hintTickers"
                         :key="t.Symbol"
                         @click="addTicker(t.Symbol)"
                         class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
                       {{ t.Symbol }}
-                    </span>
+                    </button>
                 </div>
                 <div v-if="isExistError" class="text-sm text-red-600">{{ this.isExistError }}</div>
             </div>
@@ -40,7 +40,7 @@
 import FilledButton from "@/components/FilledButton";
 import BorderedInput from "@/components/BorderedInput";
 import AddIcon from "@/assets/img/icons/AddIcon";
-import VFocus from "@/directives/VFocus";
+import VFocus from "@/services/directives/VFocus";
 
 export default {
     name: "AddTickerSection",

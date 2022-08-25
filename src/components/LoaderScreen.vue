@@ -1,5 +1,5 @@
 <template>
-    <div class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center">
+    <div v-if="visible" class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center">
         <svg class="animate-spin -ml-1 mr-3 h-12 w-12 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
              viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -11,6 +11,21 @@
 
 <script>
 export default {
-    name: "loader-screen"
+    name: "LoaderScreen",
+
+    data() {
+        return {
+            visible: true,
+        }
+    },
+
+    methods: {
+        open() {
+            this.visible = true;
+        },
+        close() {
+            this.visible = false;
+        },
+    },
 }
 </script>
