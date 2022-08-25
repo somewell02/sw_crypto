@@ -30,7 +30,7 @@
             </div>
 
             <template v-if="tickers.length">
-                <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
+                <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3" ref="tickersList">
                     <div
                         v-for="(t, i) in paginatedTickers"
                         :key="i"
@@ -111,7 +111,7 @@ import {
 import { channel } from "@/data/broadcast-channel";
 
 import { getUrlParams, historyPushState } from "@/services/methods/url";
-import {getFromLocalStorage, setToLocalStorage} from "@/services/methods/localstorage";
+import { getFromLocalStorage, setToLocalStorage } from "@/services/methods/localstorage";
 
 export default {
     COUNT_ON_PAGE: 6,

@@ -42,6 +42,8 @@ import BorderedInput from "@/components/BorderedInput";
 import AddIcon from "@/assets/img/icons/AddIcon";
 import VFocus from "@/services/directives/VFocus";
 
+import {ref, computed, toRefs} from "vue";
+
 export default {
     name: "AddTickerSection",
     components: {
@@ -52,13 +54,6 @@ export default {
 
     directives: {
         "focus": VFocus,
-    },
-
-    data() {
-        return {
-            ticker: "",
-            isExistError: null,
-        }
     },
 
     props: {
@@ -77,25 +72,34 @@ export default {
         "add-ticker": value => typeof value === "string" && value.length > 0,
     },
 
-    computed: {
-        hintTickers() {
-            return this.allTickers.filter((t) => t.FullName.toUpperCase().includes(this.ticker.toUpperCase())).slice(0, 4);
-        },
-    },
+    setup(props, { emit }) {
+        const ticker = ref("");
+        const isExistError = ref(null);
+        const { tickers, allTickers } = toRefs(props);
 
-    methods: {
-        addTicker(ticker) {
-            if (ticker.length === 0) return;
+        const addTicker = (tickerToAdd) => {
+            if (tickerToAdd.length === 0) return;
 
-            if (this.tickers.includes(ticker.toUpperCase())) {
-                this.isExistError = "Такой тикер уже добавлен";
+            if (tickers.value.includes(tickerToAdd.toUpperCase())) {
+                isExistError.value = "Такой тикер уже добавлен";
             } else {
-                this.$emit("add-ticker", ticker);
+                emit("add-ticker", tickerToAdd);
 
-                this.ticker = "";
-                this.isExistError = null;
+                ticker.value = "";
+                isExistError.value = null;
             }
-        },
+        }
+
+        const hintTickers = computed(
+            () => allTickers.value.filter((t) => t.FullName.toUpperCase().includes(ticker.value.toUpperCase())).slice(0, 4)
+        );
+
+        return {
+            ticker,
+            isExistError,
+            addTicker,
+            hintTickers,
+        }
     },
 }
 </script>

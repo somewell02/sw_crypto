@@ -10,22 +10,24 @@
 </template>
 
 <script>
+import { ref } from "vue";
+
 export default {
     name: "LoaderScreen",
-
-    data() {
-        return {
-            visible: true,
+    setup() {
+        const visible = ref(true);
+        const open = () => {
+            visible.value = true;
         }
-    },
+        const close = () => {
+            visible.value = false;
+        }
 
-    methods: {
-        open() {
-            this.visible = true;
-        },
-        close() {
-            this.visible = false;
-        },
-    },
+        return {
+            visible,
+            open,
+            close
+        }
+    }
 }
 </script>

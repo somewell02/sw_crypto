@@ -9,18 +9,21 @@
 
 <script>
 export default {
-    name: "bordered-input",
+    name: "BorderedInput",
     props: {
         modelValue: {
             type: String,
-            default: "",
             required: true,
-        },
+        }
     },
-    methods: {
-        updateInput(event) {
-            this.$emit("update:modelValue", event.target.value);
-        },
-    },
+    setup(props, { emit }) {
+        const updateInput = (event) => {
+            emit("update:modelValue", event.target.value);
+        }
+
+        return {
+            updateInput,
+        }
+    }
 }
 </script>

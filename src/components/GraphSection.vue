@@ -14,7 +14,7 @@
                 class="bg-purple-800 border"
             ></div>
         </div>
-        <close-button @click="$emit('close')" />
+        <close-button @click="closeGraph" />
     </section>
 </template>
 
@@ -22,20 +22,13 @@
 import CloseButton from "@/components/CloseButton";
 
 import {loadTickerHistory, subscribeToTicker, unsubscribeFromTicker} from "@/data/api";
+//import {onMounted, onBeforeUnmount, ref, computed, toRefs, watch} from "vue";
 
 export default {
     GRAPH_ELEMENT_WIDTH: 38,
-
     name: "GraphSection",
     components: {
         CloseButton,
-    },
-
-    data() {
-        return {
-            graph: [],
-            maxGraphElements: 1,
-        }
     },
 
     props: {
@@ -47,6 +40,13 @@ export default {
 
     emits: {
         "close": null,
+    },
+
+    data() {
+        return {
+            graph: [],
+            maxGraphElements: 1,
+        }
     },
 
     mounted() {
@@ -103,6 +103,9 @@ export default {
                     this.graph.push(priceData.open);
                 })
             });
+        },
+        closeGraph() {
+            this.$emit("close");
         }
     },
 
@@ -124,5 +127,100 @@ export default {
             this.fixGraphLength();
         },
     }
+
+
+    // setup(props, { emit }) {
+    //     const GRAPH_ELEMENT_WIDTH = 38;
+    //
+    //     const graph = ref([]);
+    //     const maxGraphElements = ref(1);
+    //     const graphSection = ref(null);
+    //
+    //     const { ticker } = toRefs(props);
+    //
+    //     const normalizedGraph = computed(() => {
+    //         const max = Math.max(...graph.value);
+    //         const min = Math.min(...graph.value);
+    //
+    //         if (max === min) {
+    //             return graph.value.map(() => 50);
+    //         }
+    //         return graph.value.map(
+    //             bar => 5 + ((bar - min) * 95) / (max - min)
+    //         );
+    //     });
+    //
+    //     const fixGraphLength = () => {
+    //         if (graph.value.length > maxGraphElements.value) {
+    //             graph.value = graph.value.slice(graph.value.length - maxGraphElements.value);
+    //         }
+    //     }
+    //
+    //     const pushToGraph = (price) => {
+    //         graph.value.push(price);
+    //         fixGraphLength();
+    //     }
+    //
+    //     const calculateMaxGraphElements = () => {
+    //         if (!this.$refs.graphSection) return;
+    //         maxGraphElements.value = Math.ceil(this.$refs.graph.offsetWidth / GRAPH_ELEMENT_WIDTH);
+    //     }
+    //
+    //     const pushTickerHistoryToGraph = (ticker) =>  {
+    //         loadTickerHistory(ticker, maxGraphElements.value - 1).then((history) => {
+    //             history.Data.Data.forEach((priceData) => {
+    //                 graph.value.push(priceData.open);
+    //             })
+    //         });
+    //     }
+    //
+    //     const closeGraph = () => {
+    //         emit("close");
+    //     }
+    //
+    //     watch(() => ticker, (newValue, oldValue) => {
+    //         graph.value = [];
+    //
+    //         if (oldValue) unsubscribeFromTicker(oldValue, pushToGraph);
+    //         if (newValue) subscribeToTicker(newValue, pushToGraph);
+    //
+    //         this.$nextTick().then(() => {
+    //             calculateMaxGraphElements();
+    //             if (newValue) {
+    //                 pushTickerHistoryToGraph(newValue);
+    //             }
+    //         });
+    //     });
+    //
+    //     watch(() => graph, () => {
+    //         fixGraphLength();
+    //     });
+    //
+    //     onMounted(() => {
+    //         window.addEventListener("resize", calculateMaxGraphElements);
+    //         window.addEventListener("resize", fixGraphLength);
+    //
+    //         subscribeToTicker(ticker.value, pushToGraph);
+    //         this.$nextTick().then(() => {
+    //             calculateMaxGraphElements();
+    //             if (ticker.value) {
+    //                 pushTickerHistoryToGraph(ticker.value);
+    //             }
+    //         });
+    //     });
+    //
+    //     onBeforeUnmount(() => {
+    //         window.removeEventListener("resize", calculateMaxGraphElements);
+    //         window.removeEventListener("resize", fixGraphLength);
+    //     });
+    //
+    //     return {
+    //         GRAPH_ELEMENT_WIDTH,
+    //         graph,
+    //         maxGraphElements,
+    //         normalizedGraph,
+    //         closeGraph,
+    //     }
+    // },
 }
 </script>
