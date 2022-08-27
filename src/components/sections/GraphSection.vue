@@ -19,7 +19,7 @@
 </template>
 
 <script>
-import CloseButton from "@/components/CloseButton";
+import CloseButton from "@/components/buttons/CloseButton";
 
 import {loadTickerHistory, subscribeToTicker, unsubscribeFromTicker} from "@/data/api";
 //import {onMounted, onBeforeUnmount, ref, computed, toRefs, watch} from "vue";

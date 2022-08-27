@@ -37,8 +37,8 @@
 </template>
 
 <script>
-import FilledButton from "@/components/FilledButton";
-import BorderedInput from "@/components/BorderedInput";
+import FilledButton from "@/components/buttons/FilledButton";
+import BorderedInput from "@/components/inputs/BorderedInput";
 import AddIcon from "@/assets/img/icons/AddIcon";
 import VFocus from "@/services/directives/VFocus";
 

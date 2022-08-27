@@ -9,8 +9,8 @@
 </template>
 
 <script>
-import ModalWrap from "@/components/ModalWrap";
-import FilledButton from "@/components/FilledButton";
+import ModalWrap from "@/components/popups/ModalWrap";
+import FilledButton from "@/components/buttons/FilledButton";
 import VFocus from "@/services/directives/VFocus";
 
 export default {
