@@ -3,11 +3,12 @@
         <div class="flex">
             <div class="max-w-xs">
                 <h3 for="wallet" class="block text-lg font-medium text-gray-700"> Добавить тикер </h3>
-                <div class="mt-4 relative rounded-md shadow-md">
+                <div class="mt-4 relative rounded-md">
                     <bordered-input
                         v-model="ticker"
                         @keydown.enter="addTicker(ticker)"
                         @input="isExistError = null"
+                        type="text"
                         name="wallet"
                         id="wallet"
                         placeholder="Например DOGE"
@@ -16,7 +17,7 @@
                 </div>
                 <div
                     v-if="allTickers && hintTickers.length > 0 && ticker"
-                    class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
+                    class="flex bg-white py-1 rounded-md flex-wrap"
                 >
                     <button
                         v-for="t in hintTickers"
@@ -30,7 +31,7 @@
             </div>
         </div>
         <filled-button @click="addTicker(ticker)" class="mt-4">
-            <add-icon/>
+            <add-icon />
             Добавить
         </filled-button>
     </section>

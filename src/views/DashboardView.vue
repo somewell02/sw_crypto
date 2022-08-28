@@ -2,16 +2,23 @@
     <main class="w-full">
         <loader-screen ref="loaderScreen"/>
         <div class="container">
-            <modal-wrap ref="addTickerModal">
-                <add-ticker-section
-                    :tickers="tickers.map(t => t.name)"
-                    :allTickers="allTickers"
-                    @add-ticker="addTicker"
-                />
-            </modal-wrap>
-
             <div class="flex justify-between items-center">
                 <div class="flex items-center">
+                    <filled-button
+                        class="flex-shrink-0 mr-4"
+                        @click="$refs.addTickerModal.open()"
+                    >
+                        Добавить тикер
+                    </filled-button>
+
+                    <modal-wrap ref="addTickerModal">
+                        <add-ticker-section
+                            :tickers="tickers.map(t => t.name)"
+                            :allTickers="allTickers"
+                            @add-ticker="addTicker"
+                        />
+                    </modal-wrap>
+
                     <bordered-input
                         v-model="search"
                         type="text"
@@ -22,10 +29,15 @@
                 </div>
                 <div>
                     <filled-button
-                        @click="$refs.addTickerModal.open()"
+                        class="flex-shrink-0 mr-4"
+                        @click="$refs.authModal.open()"
                     >
-                        Добавить тикер
+                        Вход / Регистрация
                     </filled-button>
+
+                    <modal-wrap ref="authModal">
+                        <auth-form-section />
+                    </modal-wrap>
                 </div>
             </div>
 
@@ -112,6 +124,7 @@ import { channel } from "@/data/broadcast-channel";
 
 import { getUrlParams, historyPushState } from "@/services/methods/url";
 import { getFromLocalStorage, setToLocalStorage } from "@/services/methods/localstorage";
+import AuthFormSection from "@/components/sections/AuthFormSection";
 
 export default {
     COUNT_ON_PAGE: 9,
@@ -119,6 +132,7 @@ export default {
 
     name: 'DashboardView',
     components: {
+        AuthFormSection,
         ConfirmPopup,
         ModalWrap,
         GraphSection,
