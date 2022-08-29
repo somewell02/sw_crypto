@@ -124,7 +124,7 @@ import { channel } from "@/data/broadcast-channel";
 
 import { getUrlParams, historyPushState } from "@/services/methods/url";
 import { getFromLocalStorage, setToLocalStorage } from "@/services/methods/localstorage";
-import AuthFormSection from "@/components/sections/AuthFormSection";
+import AuthFormSection from "@/components/sections/AuthTabSection";
 
 export default {
     COUNT_ON_PAGE: 9,
