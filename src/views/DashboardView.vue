@@ -36,46 +36,31 @@
                     </filled-button>
 
                     <modal-wrap ref="authModal">
-                        <auth-form-section />
+                        <auth-form-section/>
                     </modal-wrap>
                 </div>
             </div>
 
             <template v-if="tickers.length">
-                <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3" ref="tickersList">
-                    <div
-                        v-for="(t, i) in paginatedTickers"
-                        :key="i"
+                <transition-group name="flip-list" tag="div" class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
+                    <ticker-card
+                        v-for="t in paginatedTickers"
+                        :key="t.name"
+                        :ticker="t"
                         @click="selectTicker(t)"
-                        class="overflow-hidden shadow rounded-lg outline-purple-800 cursor-pointer"
-                        :class="{
-                            'outline': selectedTicker === t,
-                            'bg-white': t.price !== '-',
-                            'bg-red-100': t.price === '-',
-                        }"
-                    >
-                        <div class="px-4 py-5 sm:p-6 text-center">
-                            <dt class="text-sm font-medium text-gray-500 truncate">
-                                {{ t.name }} - USD
-                            </dt>
-                            <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                                {{ formatPrice(t.price) }}
-                            </dd>
-                        </div>
-                        <div class="w-full border-t border-gray-200"></div>
-                        <button
-                            @click.stop="deleteTicker(t)"
-                            class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
-                        >
-                            <delete-icon/>
-                            Удалить
-                        </button>
-                    </div>
-                    <confirm-popup ref="confirmPopup" />
-                </dl>
+                        @delete="deleteTicker(t)"
+                        @dragstart="tickerDragstart(t)"
+                        @dragover="e => tickerDragover(e, t)"
+                        :draggable="true"
+                        :class="{ 'outline': selectedTicker === t }"
+                    />
+                </transition-group>
+                <confirm-popup ref="confirmPopup"/>
                 <div class="flex mt-5 justify-between items-center">
                     <div class="text-gray-500">
-                        {{ startIndex + 1 }} - {{ endIndex > filteredTickers.length ? filteredTickers.length : endIndex }} из {{ filteredTickers.length }}
+                        {{ startIndex + 1 }} - {{
+                            endIndex > filteredTickers.length ? filteredTickers.length : endIndex
+                        }} из {{ filteredTickers.length }}
                     </div>
                     <div>
                         <filled-button
@@ -105,7 +90,6 @@
 </template>
 
 <script>
-import DeleteIcon from "@/assets/img/icons/DeleteIcon";
 import LoaderScreen from "@/components/LoaderScreen";
 import BorderedInput from "@/components/inputs/BorderedInput";
 import FilledButton from "@/components/buttons/FilledButton";
@@ -120,11 +104,12 @@ import {
     deleteTicker,
     loadAllTickers, subscribeToTicker,
 } from "@/data/api";
-import { channel } from "@/data/broadcast-channel";
+import {channel} from "@/data/broadcast-channel";
 
-import { getUrlParams, historyPushState } from "@/services/methods/url";
-import { getFromLocalStorage, setToLocalStorage } from "@/services/methods/localstorage";
+import {getUrlParams, historyPushState} from "@/services/methods/url";
+import {getFromLocalStorage, setToLocalStorage} from "@/services/methods/localstorage";
 import AuthFormSection from "@/components/sections/AuthTabSection";
+import TickerCard from "@/components/cards/TickerCard";
 
 export default {
     COUNT_ON_PAGE: 9,
@@ -132,6 +117,7 @@ export default {
 
     name: 'DashboardView',
     components: {
+        TickerCard,
         AuthFormSection,
         ConfirmPopup,
         ModalWrap,
@@ -139,8 +125,7 @@ export default {
         AddTickerSection,
         FilledButton,
         BorderedInput,
-        LoaderScreen,
-        DeleteIcon
+        LoaderScreen
     },
 
     data() {
@@ -148,6 +133,9 @@ export default {
             tickers: [],
             allTickers: null,
             selectedTicker: null,
+
+            dragElement: null,
+            dragActive: false,
 
             search: "",
             page: 1,
@@ -172,7 +160,7 @@ export default {
         }
 
         channel.addEventListener("message", (event) => {
-            const { type, data } = event.data;
+            const {type, data} = event.data;
             switch (type) {
                 case "add-ticker":
                     if (!this.tickers.map(t => t.name).includes(data.ticker)) {
@@ -218,9 +206,30 @@ export default {
     },
 
     methods: {
-        formatPrice(price) {
-            if (typeof price !== "number") return "-";
-            else return price > 1 ? price.toFixed(2) : price.toPrecision(2);
+        tickerDragstart(ticker) {
+            this.dragElement = ticker;
+        },
+        tickerDragover({target, screenX}, ticker) {
+            if (ticker === this.dragElement || this.dragActive) return;
+
+            const elementIndex = this.tickers.indexOf(this.dragElement);
+            const placeholderIndex = this.tickers.indexOf(ticker);
+            const placeholderCenterPointX = target.offsetLeft + target.offsetWidth / 2;
+
+            const newIndex = placeholderIndex + (
+                screenX > placeholderCenterPointX
+                    ? (elementIndex < placeholderIndex ? 0 : 1)
+                    : (elementIndex < placeholderIndex ? -1 : 0)
+            );
+
+
+            if (elementIndex !== newIndex) {
+                this.dragActive = true;
+                setTimeout(() => this.dragActive = false, 500);
+
+                this.tickers = this.tickers.filter(t => t !== this.dragElement);
+                this.tickers.splice(newIndex, 0, this.dragElement);
+            }
         },
         updateTickerPrice(tickerName, price) {
             this.tickers
@@ -257,8 +266,11 @@ export default {
     },
 
     watch: {
-        tickers() {
-            setToLocalStorage(this.$options.TICKERS_LS_KEY, this.tickers);
+        tickers: {
+            handler() {
+                setToLocalStorage(this.$options.TICKERS_LS_KEY, this.tickers);
+            },
+            deep: true,
         },
         paginatedTickers() {
             if (this.paginatedTickers.length === 0 && this.page > 1) {
@@ -277,3 +289,9 @@ export default {
     }
 }
 </script>
+
+<style lang="scss">
+.flip-list-move {
+    transition: transform 0.5s ease;
+}
+</style>
