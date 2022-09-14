@@ -20,7 +20,6 @@
         <div class="w-full border-t border-gray-200 pointer-events-none"></div>
         <button
             @click.stop="$emit('delete')"
-            @dragover.prevent="e => $emit('dragover', { target: $refs.tickerCard, screenX: e.screenX })"
             class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
         >
             <delete-icon class="pointer-events-none" />

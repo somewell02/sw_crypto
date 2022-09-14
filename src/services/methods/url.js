@@ -1,8 +1,9 @@
 export const historyPushState = (params) => {
-    let urlParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-        urlParams.set(key, value);
-    })
+    const windowData = getUrlParams();
+
+    const urlParams = new URLSearchParams();
+    Object.entries(windowData).forEach(([key, value]) => urlParams.set(key, value));
+    Object.entries(params).forEach(([key, value]) => urlParams.set(key, value));
 
     window.history.pushState(
         null,
