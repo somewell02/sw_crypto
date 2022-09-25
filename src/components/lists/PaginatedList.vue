@@ -1,5 +1,5 @@
 <template>
-    <div class="paginated_list_wrap">
+    <div class="paginated_list_wrap" @dragover="containerDragover">
         <transition-group name="tickers-list" tag="div" class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
             <ticker-card
                 v-for="t in paginatedItems"
@@ -66,9 +66,12 @@ export default {
 
         const page = ref(1);
         const pagesLength = computed(() => Math.ceil(items.value.length / countOnPage.value));
+
         onMounted(() => {
             const windowData = getUrlParams();
-            page.value = parseInt(windowData.page);
+            if (windowData.page) {
+                page.value = parseInt(windowData.page);
+            }
         })
         watch(page,(v) => {
             historyPushState({
@@ -86,6 +89,14 @@ export default {
             }
         });
 
+        const containerDragover = (e) => {
+            if (page.value > 1 && e.screenX < 20) {
+                page.value -= 1;
+            } else if (page.value < pagesLength.value && e.screenX > window.innerWidth - 20) {
+                page.value += 1;
+            }
+        };
+
         const handleDragover = (dragElement, newIndex) => emit("handleDragover", dragElement, newIndex);
 
         const {
@@ -100,7 +111,8 @@ export default {
             endIndex,
             paginatedItems,
             tickerDragstart,
-            tickerDragover
+            tickerDragover,
+            containerDragover
         }
     },
 }

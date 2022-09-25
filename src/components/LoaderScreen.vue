@@ -16,12 +16,9 @@ export default {
     name: "LoaderScreen",
     setup() {
         const visible = ref(true);
-        const open = () => {
-            visible.value = true;
-        }
-        const close = () => {
-            visible.value = false;
-        }
+
+        const open = () => visible.value = true;
+        const close = () => visible.value = false;
 
         return {
             visible,

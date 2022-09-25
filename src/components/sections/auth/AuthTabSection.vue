@@ -30,8 +30,8 @@
 </template>
 
 <script>
-import AuthForm from "@/components/sections/AuthForm";
-import RegisterForm from "@/components/sections/RegisterForm";
+import AuthForm from "./AuthForm";
+import RegisterForm from "./RegisterForm";
 
 import { ref } from "vue";
 

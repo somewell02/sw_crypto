@@ -2,7 +2,7 @@
     <main class="w-full">
         <loader-screen ref="loaderScreen"/>
         <div class="container">
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center pt-4 pr-4 pl-4">
                 <div class="flex items-center">
                     <filled-button
                         class="flex-shrink-0 mr-4"
@@ -49,12 +49,13 @@
                     @select="selectTicker"
                     @delete="deleteTicker"
                     @handleDragover="handleDragover"
+                    class="pr-4 pl-4"
                 />
                 <confirm-popup ref="confirmPopup"/>
             </template>
             <template v-if="selectedTicker">
-                <hr class="w-full border-t border-gray-600 my-4"/>
-                <graph-section :ticker="selectedTicker.name" @close="clearSelectedTicker"/>
+                <hr class="border-t border-gray-600 m-4"/>
+                <graph-section :ticker="selectedTicker.name" @close="clearSelectedTicker" class="mb-4 mx-4"/>
             </template>
         </div>
     </main>
@@ -69,7 +70,7 @@ import AddTickerSection from "@/components/sections/AddTickerSection";
 import GraphSection from "@/components/sections/GraphSection";
 import ModalWrap from "@/components/popups/ModalWrap";
 import ConfirmPopup from "@/components/popups/ConfirmPopup";
-import AuthFormSection from "@/components/sections/AuthTabSection";
+import AuthFormSection from "@/components/sections/auth/AuthTabSection";
 import PaginatedList from "@/components/lists/PaginatedList";
 
 import {

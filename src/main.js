@@ -5,6 +5,7 @@ import './assets/css/tailwind.css'
 import './assets/css/index.scss'
 
 import router from "./router/router";
+import store from "./data/store/vuex";
 
 const app = createApp(App);
-app.use(router).mount('#app')
+app.use(store).use(router).mount('#app')

@@ -12,10 +12,9 @@
 import ModalWrap from "@/components/popups/ModalWrap";
 import FilledButton from "@/components/buttons/FilledButton";
 import VFocus from "@/services/directives/VFocus";
+import {ref} from "vue";
 
 export default {
-    popupController: null,
-
     name: "ConfirmPopup",
     components: {FilledButton, ModalWrap},
 
@@ -23,14 +22,13 @@ export default {
         "focus": VFocus,
     },
 
-    data() {
-        return {
-            title: "",
-        }
-    },
+    setup() {
+        let popupController = null;
+        
+        const title = ref("");
+        const modal = ref(null);
 
-    methods: {
-        open(title = "Вы уверены?") {
+        const open = (t = "Вы уверены?") => {
             let resolve;
             let reject;
 
@@ -39,21 +37,31 @@ export default {
                 reject = fail;
             });
 
-            this.$options.popupController = { resolve, reject };
+            popupController = { resolve, reject };
 
-            this.$refs.modal.open();
-            this.title = title;
+            modal.value.open();
+            title.value = t;
 
             return popupPromise;
-        },
-        confirm() {
-            this.$options.popupController.resolve(true);
-            this.$refs.modal.close();
-        },
-        close() {
-            this.$options.popupController.resolve(false);
-            this.$refs.modal.close();
-        },
+        }
+
+        const confirm = () => {
+            popupController.resolve(true);
+            modal.value.close();
+        }
+
+        const close = () => {
+            popupController.resolve(false);
+            modal.value.close();
+        }
+
+        return {
+            title,
+            modal,
+            open,
+            confirm,
+            close,
+        }
     },
 }
 </script>

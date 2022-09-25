@@ -13,6 +13,7 @@
 <script>
 export default {
     name: "BorderedInput",
+
     props: {
         modelValue: {
             type: String,
@@ -24,7 +25,12 @@ export default {
             default: true,
         },
     },
-    setup(props, { emit }) {
+
+    emits: {
+        "update:modelValue": null,
+    },
+
+    setup(_, { emit }) {
         const updateInput = (event) => {
             emit("update:modelValue", event.target.value);
         }

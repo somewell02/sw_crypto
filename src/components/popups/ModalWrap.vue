@@ -14,35 +14,36 @@
 </template>
 
 <script>
+import {onBeforeUnmount, onMounted, ref} from "vue";
+
 export default {
     name: "ModalWrap",
 
-    data() {
-        return {
-            visible: false,
-        }
-    },
+    setup() {
+        const visible = ref(false);
 
-    mounted() {
-        document.addEventListener("keydown", this.handleKeydown);
-    },
+        const open = () => visible.value = true;
+        const close = () => visible.value = false;
 
-    beforeUnmount() {
-        document.removeEventListener("keydown", this.handleKeydown);
-    },
-
-    methods: {
-        open() {
-            this.visible = true;
-        },
-        close() {
-            this.visible = false;
-        },
-        handleKeydown(e) {
-            if (e.key === "Escape" && this.visible) {
+        const handleKeydown = event => {
+            if (event.key === "Escape" && this.visible) {
                 this.visible = false;
             }
         }
-    }
+
+        onMounted(() => {
+            document.addEventListener("keydown", handleKeydown);
+        })
+
+        onBeforeUnmount(()=> {
+            document.removeEventListener("keydown", handleKeydown);
+        })
+
+        return {
+            visible,
+            open,
+            close,
+        }
+    },
 }
 </script>

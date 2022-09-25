@@ -47,11 +47,17 @@ export default {
         }
     },
 
-    methods: {
-        formatPrice(price) {
-            if (typeof price !== "number") return "-";
-            else return price > 1 ? price.toFixed(2) : price.toPrecision(2);
-        },
+    setup() {
+        const formatPrice = (price) =>
+            typeof price !== "number"
+                ? "-"
+                : price > 1
+                    ? price.toFixed(2)
+                    : price.toPrecision(2);
+
+        return {
+            formatPrice,
+        }
     }
 }
 </script>
