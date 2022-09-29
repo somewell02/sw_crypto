@@ -10,11 +10,12 @@
                         name="wallet"
                         id="wallet"
                         placeholder="Например DOGE"
+                        @input="addTickerForm.submitted = false"
                         v-focus
                     />
                 </div>
                 <div
-                    v-if="allTickers && hintTickers.length > 0 && addTickerForm.name.value"
+                    v-if="hintTickers.length > 0 && addTickerForm.name.value"
                     class="flex bg-white py-1 rounded-md flex-wrap"
                 >
                     <button
@@ -47,6 +48,7 @@ import VFocus from "@/services/directives/VFocus";
 
 import {computed, nextTick, toRefs} from "vue";
 import {useForm} from "@/use/form";
+import {mapGetters} from "@/services/methods/store";
 
 export default {
     name: "AddTickerSection",
@@ -65,11 +67,6 @@ export default {
             type: Array,
             required: true,
         },
-        allTickers: {
-            type: Array,
-            required: false,
-            default: null,
-        },
     },
 
     emits: {
@@ -77,7 +74,7 @@ export default {
     },
 
     setup(props, { emit }) {
-        const { tickers, allTickers } = toRefs(props);
+        const { tickers } = toRefs(props);
 
         const required = val => !!val;
         const notInclude = val => !tickers.value.includes(val.toUpperCase());
@@ -99,10 +96,16 @@ export default {
             })
         }
 
+        const {
+            "allTickers/getAllTickers": getAllTickers
+        } = mapGetters();
+
         const hintTickers = computed(
-            () => allTickers.value.filter(
-                (t) => t.FullName.toUpperCase().includes(addTickerForm.name.value.toUpperCase())
-            ).slice(0, 4)
+            () => getAllTickers.value
+                ? getAllTickers.value.filter(
+                    (t) => t.FullName.toUpperCase().includes(addTickerForm.name.value.toUpperCase())
+                ).slice(0, 4)
+                : []
         );
 
         const addHintTicker = (t) => {

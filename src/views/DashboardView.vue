@@ -14,7 +14,6 @@
                     <modal-wrap ref="addTickerModal">
                         <add-ticker-section
                             :tickers="tickers.map(t => t.name)"
-                            :allTickers="allTickers"
                             @add-ticker="addTicker"
                         />
                     </modal-wrap>
@@ -76,7 +75,7 @@ import PaginatedList from "@/components/lists/PaginatedList";
 import {
     addTicker,
     deleteTicker,
-    loadAllTickers, subscribeToTicker,
+    subscribeToTicker,
 } from "@/data/api";
 import {channel} from "@/data/broadcast-channel";
 
@@ -103,7 +102,6 @@ export default {
     data() {
         return {
             tickers: [],
-            allTickers: null,
             selectedTicker: null,
 
             search: "",
@@ -131,8 +129,7 @@ export default {
     async mounted() {
         channel.addEventListener("message", this.handleTickersOnMessage);
 
-        const allTickersData = await loadAllTickers();
-        this.allTickers = Object.values(allTickersData.Data);
+        await this.$store.dispatch("allTickers/fetchAllTickers");
         this.$refs.loaderScreen.close();
     },
 

@@ -1,11 +1,11 @@
 import { createStore } from "vuex";
+import allTickersModule from "./all-tickers";
 
 export default createStore({
     state: () => ({
         darkTheme: false,
     }),
-    getters: {},
-    mutations: {},
-    actions: {},
-    modules: {},
+    modules: {
+        allTickers: allTickersModule
+    },
 });
