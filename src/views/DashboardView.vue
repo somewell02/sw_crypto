@@ -6,7 +6,7 @@
                 <div class="flex items-center">
                     <filled-button
                         class="flex-shrink-0 mr-4"
-                        @click="$refs.addTickerModal.open()"
+                        @click="addTickerModal.open()"
                     >
                         Добавить тикер
                     </filled-button>
@@ -26,24 +26,13 @@
                         placeholder="Поиск..."
                     />
                 </div>
-                <div>
-                    <filled-button
-                        class="flex-shrink-0 mr-4"
-                        @click="$refs.authModal.open()"
-                    >
-                        Вход / Регистрация
-                    </filled-button>
-
-                    <modal-wrap ref="authModal">
-                        <auth-form-section/>
-                    </modal-wrap>
-                </div>
+                <auth-button-section/>
             </div>
 
             <template v-if="tickers.length">
                 <paginated-list
                     :items="filteredTickers"
-                    :countOnPage="$options.COUNT_ON_PAGE"
+                    :countOnPage="COUNT_ON_PAGE"
                     :selectedTicker="selectedTicker"
                     @select="selectTicker"
                     @delete="deleteTicker"
@@ -69,27 +58,26 @@ import AddTickerSection from "@/components/sections/AddTickerSection";
 import GraphSection from "@/components/sections/GraphSection";
 import ModalWrap from "@/components/popups/ModalWrap";
 import ConfirmPopup from "@/components/popups/ConfirmPopup";
-import AuthFormSection from "@/components/sections/auth/AuthTabSection";
 import PaginatedList from "@/components/lists/PaginatedList";
+import AuthButtonSection from "@/components/sections/auth/AuthButtonSection";
 
 import {
-    addTicker,
-    deleteTicker,
+    addTicker as addTickerToWS,
+    deleteTicker as deleteTickerFromWS,
     subscribeToTicker,
 } from "@/data/api";
 import {channel} from "@/data/broadcast-channel";
 
 import {getUrlParams, historyPushState} from "@/services/methods/url";
 import {getFromLocalStorage, setToLocalStorage} from "@/services/methods/localstorage";
+import {computed, onBeforeMount, onBeforeUnmount, onMounted, ref, nextTick, watch} from "vue";
+import {mapActions} from "@/services/methods/store";
 
 export default {
-    COUNT_ON_PAGE: 9,
-    TICKERS_LS_KEY: "crypto-list",
-
     name: 'DashboardView',
     components: {
+        AuthButtonSection,
         PaginatedList,
-        AuthFormSection,
         ConfirmPopup,
         ModalWrap,
         GraphSection,
@@ -99,116 +87,133 @@ export default {
         LoaderScreen
     },
 
-    data() {
-        return {
-            tickers: [],
-            selectedTicker: null,
+    setup() {
+        const COUNT_ON_PAGE = 9;
+        const TICKERS_LS_KEY = "crypto-list";
 
-            search: "",
-        }
-    },
+        const tickers = ref([]);
+        const selectedTicker = ref(null);
+        watch(() => tickers.value, () => {
+            setToLocalStorage(TICKERS_LS_KEY, tickers.value);
+        }, {deep: true})
 
-    created() {
-        const windowData = getUrlParams();
-        const VALID_KEYS = ["search"];
-        VALID_KEYS.forEach((key) => {
-            if (windowData[key]) {
-                this[key] = windowData[key];
-            }
-        });
-
-        const tickersData = getFromLocalStorage(this.$options.TICKERS_LS_KEY);
-        if (tickersData) {
-            this.tickers = tickersData;
-            this.tickers.forEach(t => {
-                addTicker(t.name, (newPrice) => this.updateTickerPrice(t.name, newPrice));
+        const search = ref("");
+        watch(() => search.value, (v) => {
+            historyPushState({
+                search: v,
             })
-        }
-    },
+        })
 
-    async mounted() {
-        channel.addEventListener("message", this.handleTickersOnMessage);
+        const addTickerModal = ref(null);
+        const loaderScreen = ref(null);
+        const confirmPopup = ref(null);
 
-        await this.$store.dispatch("allTickers/fetchAllTickers");
-        this.$refs.loaderScreen.close();
-    },
+        const {
+            "allTickers/fetchAllTickers": fetchAllTickers
+        } = mapActions();
 
-    beforeUnmount() {
-        channel.removeEventListener("message", this.handleTickersOnMessage);
-    },
+        onBeforeMount(() => {
+            const windowData = getUrlParams();
+            if (windowData.search) {
+                search.value = windowData.search;
+            }
 
-    computed: {
-        filteredTickers() {
-            return this.tickers.filter((t) => t.name.includes(this.search.toUpperCase()))
-        },
-    },
+            const tickersData = getFromLocalStorage(TICKERS_LS_KEY);
+            if (tickersData) {
+                tickers.value = tickersData;
+                tickers.value.forEach(t => {
+                    addTickerToWS(t.name, (newPrice) => updateTickerPrice(t.name, newPrice));
+                })
+            }
+        })
 
-    methods: {
-        updateTickerPrice(tickerName, price) {
-            this.tickers
+        onMounted(async () => {
+            channel.addEventListener("message", handleTickersOnMessage);
+
+            await fetchAllTickers();
+            nextTick().then(() => {
+                loaderScreen.value.close();
+            })
+        })
+
+        onBeforeUnmount(() => {
+            channel.removeEventListener("message", handleTickersOnMessage);
+        })
+
+        const filteredTickers = computed(() => [...tickers.value].filter((t) => t.name.includes(search.value.toUpperCase())));
+
+        const updateTickerPrice = (tickerName, price) => {
+            tickers.value
                 .filter(t => t.name === tickerName)
                 .forEach(t => {
                     t.price = price
                 });
-        },
-        addTicker(currency) {
+        }
+
+        const addTicker = currency => {
             const currentTicker = {name: currency.toUpperCase(), price: "-"};
-            this.tickers = [...this.tickers, currentTicker];
-            addTicker(currentTicker.name, (newPrice) => this.updateTickerPrice(currentTicker.name, newPrice));
+            tickers.value = [...tickers.value, currentTicker];
+            addTickerToWS(currentTicker.name, (newPrice) => updateTickerPrice(currentTicker.name, newPrice));
 
-            this.$refs.addTickerModal.close()
-            this.search = "";
-        },
-        async deleteTicker(tickerToRemove) {
-            const confirmRes = await this.$refs.confirmPopup.open(`Вы уверены, что хотите удалить тикер ${tickerToRemove.name}?`);
+            nextTick().then(() => {
+                addTickerModal.value.close();
+            })
+            search.value = "";
+        }
+
+        const deleteTicker = async tickerToRemove => {
+            const confirmRes = await confirmPopup.value.open(`Вы уверены, что хотите удалить тикер ${tickerToRemove.name}?`);
             if (confirmRes) {
-                this.tickers = this.tickers.filter(t => t !== tickerToRemove);
-                deleteTicker(tickerToRemove.name);
+                tickers.value = tickers.value.filter(t => t !== tickerToRemove);
+                deleteTickerFromWS(tickerToRemove.name);
             }
 
-            if (this.selectedTicker === tickerToRemove) {
-                this.selectedTicker = null;
+            if (selectedTicker.value === tickerToRemove) {
+                selectedTicker.value = null;
             }
-        },
-        selectTicker(tickerToSelect) {
-            this.selectedTicker = tickerToSelect;
-        },
-        clearSelectedTicker() {
-            this.selectedTicker = null
-        },
-        handleTickersOnMessage(event) {
+        }
+
+        const selectTicker = tickerToSelect => selectedTicker.value = tickerToSelect;
+        const clearSelectedTicker = () => selectedTicker.value = null;
+
+        const handleTickersOnMessage = event => {
             const {type, data} = event.data;
             switch (type) {
                 case "add-ticker":
-                    if (!this.tickers.map(t => t.name).includes(data.ticker)) {
-                        this.tickers = [...this.tickers, {name: data.ticker, price: "-"}];
-                        subscribeToTicker(data.ticker, (newPrice) => this.updateTickerPrice(data.ticker, newPrice));
+                    if (!tickers.value.map(t => t.name).includes(data.ticker)) {
+                        tickers.value = [...tickers.value, {name: data.ticker, price: "-"}];
+                        subscribeToTicker(data.ticker, (newPrice) => updateTickerPrice(data.ticker, newPrice));
                     }
                     break;
                 case "delete-ticker":
-                    this.tickers = this.tickers.filter(t => t.name !== data.ticker);
+                    tickers.value = tickers.value.filter(t => t.name !== data.ticker);
                     break;
             }
-        },
-        handleDragover(dragElement, newIndex) {
-            this.tickers = this.tickers.filter(t => t !== dragElement);
-            this.tickers.splice(newIndex, 0, dragElement);
+        }
+
+        const handleDragover = (dragElement, newIndex) => {
+            tickers.value = tickers.value.filter(t => t !== dragElement);
+            tickers.value.splice(newIndex, 0, dragElement);
+        }
+
+
+        return {
+            COUNT_ON_PAGE,
+            TICKERS_LS_KEY,
+            tickers,
+            selectedTicker,
+            search,
+            addTickerModal,
+            loaderScreen,
+            confirmPopup,
+            filteredTickers,
+            addTicker,
+            selectTicker,
+            deleteTicker,
+            handleDragover,
+            clearSelectedTicker,
         }
     },
-
-    watch: {
-        tickers: {
-            handler() {
-                setToLocalStorage(this.$options.TICKERS_LS_KEY, this.tickers);
-            },
-            deep: true,
-        },
-        search(v) {
-            historyPushState({
-                search: v,
-            });
-        },
-    }
 }
 </script>
 

@@ -36,7 +36,7 @@ import RegisterForm from "./RegisterForm";
 import { ref } from "vue";
 
 export default {
-    name: "AuthFormSection",
+    name: "AuthTabSection",
     components: {RegisterForm, AuthForm},
 
     setup() {
