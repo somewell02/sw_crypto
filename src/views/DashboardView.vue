@@ -33,17 +33,12 @@
                 <paginated-list
                     :items="filteredTickers"
                     :countOnPage="COUNT_ON_PAGE"
-                    :selectedTicker="selectedTicker"
                     @select="selectTicker"
                     @delete="deleteTicker"
                     @handleDragover="handleDragover"
                     class="pr-4 pl-4"
                 />
                 <confirm-popup ref="confirmPopup"/>
-            </template>
-            <template v-if="selectedTicker">
-                <hr class="border-t border-gray-600 m-4"/>
-                <graph-section :ticker="selectedTicker.name" @close="clearSelectedTicker" class="mb-4 mx-4"/>
             </template>
         </div>
     </main>
@@ -55,7 +50,6 @@ import BorderedInput from "@/components/inputs/BorderedInput";
 import FilledButton from "@/components/buttons/FilledButton";
 
 import AddTickerSection from "@/components/sections/AddTickerSection";
-import GraphSection from "@/components/sections/GraphSection";
 import ModalWrap from "@/components/popups/ModalWrap";
 import ConfirmPopup from "@/components/popups/ConfirmPopup";
 import PaginatedList from "@/components/lists/PaginatedList";
@@ -72,6 +66,7 @@ import {getUrlParams, historyPushState} from "@/services/methods/url";
 import {getFromLocalStorage, setToLocalStorage} from "@/services/methods/localstorage";
 import {computed, onBeforeMount, onBeforeUnmount, onMounted, ref, nextTick, watch} from "vue";
 import {mapActions} from "@/services/methods/store";
+import {useRouter} from 'vue-router';
 
 export default {
     name: 'DashboardView',
@@ -80,7 +75,6 @@ export default {
         PaginatedList,
         ConfirmPopup,
         ModalWrap,
-        GraphSection,
         AddTickerSection,
         FilledButton,
         BorderedInput,
@@ -91,8 +85,9 @@ export default {
         const COUNT_ON_PAGE = 9;
         const TICKERS_LS_KEY = "crypto-list";
 
+        const router = useRouter();
+
         const tickers = ref([]);
-        const selectedTicker = ref(null);
         watch(() => tickers.value, () => {
             setToLocalStorage(TICKERS_LS_KEY, tickers.value);
         }, {deep: true})
@@ -167,14 +162,12 @@ export default {
                 tickers.value = tickers.value.filter(t => t !== tickerToRemove);
                 deleteTickerFromWS(tickerToRemove.name);
             }
-
-            if (selectedTicker.value === tickerToRemove) {
-                selectedTicker.value = null;
-            }
         }
 
-        const selectTicker = tickerToSelect => selectedTicker.value = tickerToSelect;
-        const clearSelectedTicker = () => selectedTicker.value = null;
+        const selectTicker = tickerToSelect => router.push({
+            name: "tickerPage",
+            params: { id: tickerToSelect.name }
+        });
 
         const handleTickersOnMessage = event => {
             const {type, data} = event.data;
@@ -201,7 +194,6 @@ export default {
             COUNT_ON_PAGE,
             TICKERS_LS_KEY,
             tickers,
-            selectedTicker,
             search,
             addTickerModal,
             loaderScreen,
@@ -211,7 +203,6 @@ export default {
             selectTicker,
             deleteTicker,
             handleDragover,
-            clearSelectedTicker,
         }
     },
 }

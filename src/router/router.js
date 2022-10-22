@@ -6,6 +6,11 @@ const routes = [
         name: "dashboard",
         component: () => import("@/views/DashboardView"),
     },
+    {
+        path: "/ticker/:id",
+        name: "tickerPage",
+        component: () => import("@/views/TickerView"),
+    },
 ];
 
 const router = createRouter({

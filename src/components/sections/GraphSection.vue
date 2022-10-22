@@ -14,21 +14,15 @@
                 class="bg-purple-800 border"
             ></div>
         </div>
-        <close-button @click="closeGraph" />
     </section>
 </template>
 
 <script>
-import CloseButton from "@/components/buttons/CloseButton";
-
 import {loadTickerHistory, subscribeToTicker, unsubscribeFromTicker} from "@/data/api";
 import {onMounted, onBeforeUnmount, ref, computed, toRefs, watch, nextTick} from "vue";
 
 export default {
     name: "GraphSection",
-    components: {
-        CloseButton,
-    },
 
     props: {
         ticker: {
@@ -37,11 +31,7 @@ export default {
         },
     },
 
-    emits: {
-        "close": null,
-    },
-
-    setup(props, { emit }) {
+    setup(props) {
         const GRAPH_ELEMENT_WIDTH = 38;
 
         const graph = ref([]);
@@ -84,8 +74,6 @@ export default {
             });
         }
 
-        const closeGraph = () => emit("close");
-
         watch(graph, fixGraphLength);
 
         onMounted(() => {
@@ -127,7 +115,6 @@ export default {
             graph,
             maxGraphElements,
             normalizedGraph,
-            closeGraph,
             graphSection,
         }
     },

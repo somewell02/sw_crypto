@@ -6,6 +6,9 @@ export const AGGREGATE_INDEX = "5";
 const ERROR_INDEX = "500";
 const INVALID_SUB_MESSAGE = "INVALID_SUB";
 
+const API_URL = "https://min-api.cryptocompare.com";
+export const API_SITE_URL = "https://www.cryptocompare.com";
+
 export const tickersHandlers = new Map();
 const socket = new WebSocket(`wss://streamer.cryptocompare.com/v2?api_key=${API_KEY}`);
 
@@ -96,8 +99,8 @@ export const deleteTicker = (ticker) => {
     channelPostMessage("delete-ticker", { ticker })
 }
 
-export const loadAllTickers = () => {
-    const url = new URL("https://min-api.cryptocompare.com/data/all/coinlist");
+export const loadAllTickers = async () => {
+    const url = new URL(`${API_URL}/data/all/coinlist`);
     url.searchParams.set("summary", "true");
     url.searchParams.set("api_key", API_KEY);
 
@@ -105,8 +108,19 @@ export const loadAllTickers = () => {
         .then(data => data.json());
 }
 
-export const loadTickerHistory = (tickerName, limit) => {
-    const url = new URL("https://min-api.cryptocompare.com/data/v2/histominute");
+export const getTickerData = async symbol => {
+    const url = new URL(`${API_URL}/data/all/coinlist`);
+    url.searchParams.set("summary", "false");
+    url.searchParams.set("fsym", symbol);
+    url.searchParams.set("api_key", API_KEY);
+
+    return fetch(url.toString())
+        .then(data => data.json())
+        .then(res => res.Data[symbol]);
+}
+
+export const loadTickerHistory = async (tickerName, limit) => {
+    const url = new URL(`${API_URL}/data/v2/histominute`);
     url.searchParams.set("fsym", tickerName);
     url.searchParams.set("tsym", MAIN_CURRENCY);
     url.searchParams.set("limit", limit);
